@@ -68,13 +68,9 @@ def hinge_loss(logits, target, cap=10.0, scope=None):
     #losses_right = math_ops.sigmoid(-0.01*cross_prod)
     #losses_soft = math_ops.minimum(losses_left, losses_right)
 
-def train_with_cap(dataset, cap=10.0):
-  """ Train model with different para of "cap" for hinge loss
-  Args:
-    dataset: tf.contrib.learn.python.learn.datasets.mnist.Dataset type
-  """
+def train_with_cap(_):
+  mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
-  mnist = dataset
   # Create the model
   x = tf.placeholder(tf.float32, [None, 784])
   W = tf.Variable(tf.zeros([784, 10]))
@@ -95,7 +91,7 @@ def train_with_cap(dataset, cap=10.0):
   # outputs of 'y', and then average across the batch.
   #cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
 
-  cross_entropy = tf.reduce_mean(hinge_loss(y, y_, cap=cap))
+  cross_entropy = tf.reduce_mean(hinge_loss(y, y_, cap=100.0))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
   sess = tf.InteractiveSession()
@@ -110,13 +106,6 @@ def train_with_cap(dataset, cap=10.0):
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
   print(sess.run(accuracy, feed_dict={x: mnist.test.images,
                                       y_: mnist.test.labels}))
-
-def main(_):
-  caps = [5.0, 10.0, 50.0, 100.0, 200.0]
-  mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
-
-  for cap in caps:
-    train_with_cap(mnist, cap=cap)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
