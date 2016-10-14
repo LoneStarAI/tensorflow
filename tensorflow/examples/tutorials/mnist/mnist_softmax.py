@@ -35,7 +35,7 @@ from tensorflow.python.ops import nn_ops
 
 FLAGS = None
 
-def hinge_loss(logits, target, scope=None):
+def hinge_loss(logits, target, cap=10.0, scope=None):
   """Method that returns the loss tensor for hinge loss.
 
   Args:
@@ -58,13 +58,15 @@ def hinge_loss(logits, target, scope=None):
     all_ones = array_ops.ones_like(target)
     # convert labels into {1, -1} matrix
     labels = math_ops.sub(2 * target, all_ones)
-    losses = nn_ops.relu(math_ops.sub(all_ones, math_ops.mul(labels, logits)))
     cross_prod = math_ops.mul(labels, logits)
-    losses_left = math_ops.sigmoid(-10*cross_prod)
-    losses_right = math_ops.sigmoid(-0.01*cross_prod)
-    losses_soft = math_ops.minimum(losses_left, losses_right)
-    #losses_cap = -nn_ops.relu(math_ops.sub(100.0, losses))
-    return losses_soft
+    losses = nn_ops.relu(math_ops.sub(all_ones, cross_prod))
+    losses_cap = -nn_ops.relu(math_ops.sub(cap, losses))
+    return losses_cap
+
+    # sigmoid loss
+    #losses_left = math_ops.sigmoid(-10*cross_prod)
+    #losses_right = math_ops.sigmoid(-0.01*cross_prod)
+    #losses_soft = math_ops.minimum(losses_left, losses_right)
 
 def main(_):
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
@@ -89,7 +91,7 @@ def main(_):
   # outputs of 'y', and then average across the batch.
   #cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
 
-  cross_entropy = tf.reduce_mean(hinge_loss(y, y_))
+  cross_entropy = tf.reduce_mean(hinge_loss(y, y_, cap=100.0))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
   sess = tf.InteractiveSession()
