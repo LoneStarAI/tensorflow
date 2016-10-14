@@ -23,21 +23,57 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import ipdb
 
 # Import data
 from tensorflow.examples.tutorials.mnist import input_data
 
 import tensorflow as tf
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import nn_ops
 
 FLAGS = None
 
+def hinge_loss(logits, target, scope=None):
+  """Method that returns the loss tensor for hinge loss.
+
+  Args:
+    logits: The logits, a float tensor.
+    target: The ground truth output tensor. Its shape should match the shape of
+      logits. The values of the tensor are expected to be 0.0 or 1.0.
+    scope: The scope for the operations performed in computing the loss.
+
+  Returns:
+    A `Tensor` of same shape as logits and target representing the loss values
+      across the batch.
+
+  Raises:
+    ValueError: If the shapes of `logits` and `target` don't match.
+  """
+  with ops.name_scope(scope) as scope:
+    logits.get_shape().assert_is_compatible_with(target.get_shape())
+    # We first need to convert binary labels to -1/1 labels (as floats).
+    target = math_ops.to_float(target)
+    all_ones = array_ops.ones_like(target)
+    # convert labels into {1, -1} matrix
+    labels = math_ops.sub(2 * target, all_ones)
+    losses = nn_ops.relu(math_ops.sub(all_ones, math_ops.mul(labels, logits)))
+    cross_prod = math_ops.mul(labels, logits)
+    losses_left = math_ops.sigmoid(-10*cross_prod)
+    losses_right = math_ops.sigmoid(-0.01*cross_prod)
+    losses_soft = math_ops.minimum(losses_left, losses_right)
+    #losses_cap = -nn_ops.relu(math_ops.sub(100.0, losses))
+    return losses_soft
 
 def main(_):
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
   # Create the model
   x = tf.placeholder(tf.float32, [None, 784])
-  W = tf.Variable(tf.zeros([784, 10]))
+  W = tf.Variable(tf.truncated_normal([784, 10], mean=0.0, stddev=0.01, seed=1234))
+  #W = tf.Variable(tf.zeros([784, 10]))
   b = tf.Variable(tf.zeros([10]))
   y = tf.matmul(x, W) + b
 
@@ -46,32 +82,39 @@ def main(_):
 
   # The raw formulation of cross-entropy,
   #
-  #   tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(tf.nn.softmax(y)),
+  #   tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(tf.softmax(y)),
   #                                 reduction_indices=[1]))
   #
   # can be numerically unstable.
   #
   # So here we use tf.nn.softmax_cross_entropy_with_logits on the raw
   # outputs of 'y', and then average across the batch.
-  cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+  #cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+
+  # hinge loss from tf.contrib
+  #cross_entropy = tf.reduce_mean(tf.contrib.losses.hinge_loss(y, y_))
+
+  cross_entropy = tf.reduce_mean(hinge_loss(y, y_))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
-  sess = tf.InteractiveSession()
   # Train
   tf.initialize_all_variables().run()
   for _ in range(1000):
     batch_xs, batch_ys = mnist.train.next_batch(100)
-    sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
+    #ipdb.set_trace()
+    logit_values = y.eval({x:batch_xs})
+    train_step.run({x: batch_xs, y_: batch_ys})
 
   # Test trained model
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
+
+  print(accuracy.eval({x: mnist.test.images, y_: mnist.test.labels}))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--data_dir', type=str, default='/tmp/data',
                       help='Directory for storing data')
   FLAGS = parser.parse_args()
-  tf.app.run()
+  with tf.Session() as sess:
+    tf.app.run()
