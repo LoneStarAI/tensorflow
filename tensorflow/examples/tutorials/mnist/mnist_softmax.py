@@ -103,6 +103,9 @@ def train_with_cap(dataset, cap=10.0):
   tf.initialize_all_variables().run()
   for _ in range(1000):
     batch_xs, batch_ys = mnist.train.next_batch(100)
+    import ipdb
+    ipdb.set_trace()
+    
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
   # Test trained model
