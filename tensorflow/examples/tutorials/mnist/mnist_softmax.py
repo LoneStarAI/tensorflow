@@ -27,6 +27,7 @@ import argparse
 # Import data
 from tensorflow.examples.tutorials.mnist import input_data
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops
@@ -35,7 +36,7 @@ from tensorflow.python.ops import nn_ops
 
 FLAGS = None
 
-def hinge_loss(logits, target, cap=10.0, scope=None):
+def hinge_loss_cap(logits, target, cap=10.0, scope=None):
   """Method that returns the loss tensor for hinge loss.
 
   Args:
@@ -95,7 +96,7 @@ def train_with_cap(dataset, cap=10.0):
   # outputs of 'y', and then average across the batch.
   #cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
 
-  cross_entropy = tf.reduce_mean(hinge_loss(y, y_, cap=cap))
+  cross_entropy = tf.reduce_mean(hinge_loss_cap(y, y_, cap=cap))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
   sess = tf.InteractiveSession()
@@ -103,9 +104,10 @@ def train_with_cap(dataset, cap=10.0):
   tf.initialize_all_variables().run()
   for _ in range(1000):
     batch_xs, batch_ys = mnist.train.next_batch(100)
-    import ipdb
-    ipdb.set_trace()
-    
+
+    # introduce noise to labels
+    np.random.shuffle(batch_ys[0:20, :])
+
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
   # Test trained model
