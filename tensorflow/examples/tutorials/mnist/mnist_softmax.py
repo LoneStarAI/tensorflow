@@ -113,8 +113,12 @@ def train_with_cap(dataset, cap=10.0):
   # Test trained model
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  accu_val = sess.run(accuracy, feed_dict={x: mnist.test.images,
+                                      y_: mnist.test.labels})
   print(sess.run(accuracy, feed_dict={x: mnist.test.images,
                                       y_: mnist.test.labels}))
+  print accu_val
+
 
 def main(_):
   caps = [5.0, 10.0, 50.0, 100.0, 200.0]
