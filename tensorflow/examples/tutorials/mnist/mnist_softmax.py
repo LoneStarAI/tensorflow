@@ -35,6 +35,13 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn_ops
 
 FLAGS = None
+def convert_PN_enc(target):
+  """ Convert label encoding from one-hot 0-1 encoding to +1, -1 encoding
+  """
+  all_ones = array_ops.ones_like(target)
+  # convert labels into {1, -1} matrix
+  labels = math_ops.sub(2 * target, all_ones)
+  return labels
 
 def hinge_loss_cap(logits, target, cap=10.0, scope=None):
   """Method that returns the loss tensor for hinge loss.
@@ -84,6 +91,7 @@ def train_with_cap(dataset, cap=10.0):
 
   # Define loss and optimizer
   y_ = tf.placeholder(tf.float32, [None, 10])
+  cross_prod = math_ops.mul(y, convert_PN_enc(y_))
 
   # The raw formulation of cross-entropy,
   #
@@ -106,22 +114,25 @@ def train_with_cap(dataset, cap=10.0):
     batch_xs, batch_ys = mnist.train.next_batch(100)
 
     # introduce noise to labels
-    np.random.shuffle(batch_ys[0:20, :])
+    np.random.shuffle(batch_ys[0:10, :])
 
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
+  #import ipdb
+  #ipdb.set_trace()
+  margin = cross_prod.eval({x: batch_xs, y_:batch_ys})
   # Test trained model
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
   accu_val = sess.run(accuracy, feed_dict={x: mnist.test.images,
                                       y_: mnist.test.labels})
-  print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
-  print accu_val
+  print(accu_val)
+  return accu_val
 
 
 def main(_):
-  caps = [5.0, 10.0, 50.0, 100.0, 200.0]
+  # cap: too small: no efficient BP; too large: outlier dominate 
+  caps = [0.5, 1.0, 5.0, 10.0, 50.0, 100.0, 200.0]
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
   for cap in caps:
