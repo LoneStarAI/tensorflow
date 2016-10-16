@@ -155,7 +155,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   train_data_node = tf.placeholder(
       data_type(),
       shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
-  train_labels_node = tf.placeholder(tf.int64, shape=(BATCH_SIZE,))
+  train_labels_node = tf.placeholder(tf.int64, shape=(BATCH_SIZE, NUM_LABELS))
   eval_data = tf.placeholder(
       data_type(),
       shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
@@ -231,8 +231,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   # Training computation: logits + cross-entropy loss.
   logits = model(train_data_node, True)
   #loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-  loss = tf.reduce_mean(hinge_loss_cap(
-      logits, train_labels_node))
+  loss = tf.reduce_mean(hinge_loss_cap(logits, train_labels_node))
 
   # L2 regularization for the fully connected parameters.
   regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) +
@@ -298,8 +297,13 @@ def main(argv=None):  # pylint: disable=unused-argument
       batch_labels = train_labels[offset:(offset + BATCH_SIZE)]
       # This dictionary maps the batch data (as a numpy array) to the
       # node in the graph it should be fed to.
+
+      # convert labels to one-hot matrix encoding
+      batch_labels_one_hot = numpy.zeros((BATCH_SIZE, NUM_LABELS))
+      batch_labels_one_hot[numpy.arange(BATCH_SIZE), batch_labels] = 1
+
       feed_dict = {train_data_node: batch_data,
-                   train_labels_node: batch_labels}
+                   train_labels_node: batch_labels_one_hot}
       # Run the graph and fetch some of the nodes.
       _, l, lr, predictions = sess.run(
           [optimizer, loss, learning_rate, train_prediction],
