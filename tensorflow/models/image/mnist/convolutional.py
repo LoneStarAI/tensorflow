@@ -34,6 +34,9 @@ from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
+sys.path.append('/home/xeraph/lonestar_ai')
+from tf_utils.new_losses import hinge_loss_cap
+
 SOURCE_URL = 'http://yann.lecun.com/exdb/mnist/'
 WORK_DIRECTORY = 'data'
 IMAGE_SIZE = 28
@@ -227,7 +230,8 @@ def main(argv=None):  # pylint: disable=unused-argument
 
   # Training computation: logits + cross-entropy loss.
   logits = model(train_data_node, True)
-  loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+  #loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+  loss = tf.reduce_mean(hinge_loss_cap(
       logits, train_labels_node))
 
   # L2 regularization for the fully connected parameters.
