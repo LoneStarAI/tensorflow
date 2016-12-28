@@ -232,6 +232,8 @@ def main(argv=None):  # pylint: disable=unused-argument
   logits = model(train_data_node, True)
   #loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
   loss = tf.reduce_mean(hinge_loss_cap(logits, train_labels_node))
+      import ipdb
+      ipdb.set_trace()
 
   # L2 regularization for the fully connected parameters.
   regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) +
